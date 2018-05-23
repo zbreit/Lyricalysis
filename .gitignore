@@ -102,3 +102,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# USER-DEFiNED EXCLUDES
+client_secret.json
+config.json
