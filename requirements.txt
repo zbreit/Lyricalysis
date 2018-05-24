@@ -2,3 +2,5 @@
 --index-url https://pypi.python.org/simple/
 
 pymusixmatch==0.3
+pandas==0.23.0
+TEXTBLOB==0.15.1

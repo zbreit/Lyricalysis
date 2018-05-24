@@ -1,10 +1,10 @@
 from musixmatch import Musixmatch
 from pprint import pprint
+from utils import time
 import logging
 import json
 import re
 import sys
-from utils import time
 
 class SearchParamError(Exception):
     pass
@@ -18,7 +18,6 @@ with open('client_secret.json') as CONFIGS:
     
 musixmatch = Musixmatch(CLIENT_API_KEY)
 
-@time
 def getLyrics(song_title, artist):
     """ Returns an array containing all of the lyrics of a single song given the song title and artist name.
         If there was a malformed query, it throws a SearchParamError
@@ -34,7 +33,6 @@ def getLyrics(song_title, artist):
         raise SearchParamError('Could not locate the song \'{}\' by \'{}\''.format(song_title, artist))
     lyric_letters = stripBrandedMessage(lyric_letters)
     lyrics = lyric_letters.split()
-    pprint(lyrics)
     return lyrics
 
 def stripBrandedMessage(lyrics):
@@ -44,11 +42,11 @@ def stripBrandedMessage(lyrics):
     else:    
         CHARS_IN_BRANDED_MESSAGE = 53
     return lyrics[:-CHARS_IN_BRANDED_MESSAGE]
-
+"""
 # Test
 try:
     pprint(getLyrics(sys.argv[1], sys.argv[2]))
 except SearchParamError as e:
     logging.error(e)
 except CopyrightError as e:
-    logging.error(e)
+    logging.error(e)"""

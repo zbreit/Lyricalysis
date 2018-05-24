@@ -10,4 +10,3 @@ def time(fn):
         return fn_result
         
     return timedFunction
-
