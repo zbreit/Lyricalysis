@@ -1,6 +1,7 @@
 import pandas as pd
 from musixmatchWrapper import getLyrics, SearchParamError, CopyrightError
 from textblob import TextBlob
+import json
 
 decades_of_music_df = pd.read_csv('top100ByDecade.csv', encoding='latin-1')
 
@@ -30,20 +31,25 @@ for decade, df in decades_of_music.items():
         print(numSongs, ': ', end='')
         try:
             [lyrics_by_decade[decade].append(lyric) for lyric in getLyrics(row['title'], row['artist_name'])]
-            print(row['title'], 'by', row['artist_name'])
+            #print(row['title'], 'by', row['artist_name'])
         except CopyrightError as e:
-            print(e)
+            #print(e)
+            pass
         except SearchParamError as e:
             print(e)
+            numSongs += 1
+            continue
         except json.decoder.JSONDecodeError as e:
             print(e)
-            print('Song: {} by {}'.format(row['title'], row['artist_name']))
+            print('Song: {} by {} had a JSON decoding error'.format(row['title'], row['artist_name']))
+        print('')
         numSongs += 1
 
 lyricBlobs = {}
-
+"""
 for decade, lyrics in lyrics_by_decade.items():
     lyricBlobs[decade] = TextBlob(' '.join(lyrics))
     for sentence in lyricBlobs[decade].sentences:
         print('Sentence: {}\n\tPolarity: {}\n\n'.format(sentence, 
             sentence.sentiment.polarity))
+"""

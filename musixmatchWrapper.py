@@ -25,6 +25,7 @@ def getLyrics(song_title, artist):
     """
     try:
         lyric_response = musixmatch.matcher_lyrics_get(song_title, artist)
+        print(lyric_response)
         if lyric_response['message']['body']['lyrics']['restricted'] == 1:
             raise CopyrightError('The song \'{}\' by \'{}\' has restricted lyrics.'.format(song_title, artist))
         else:
@@ -42,11 +43,11 @@ def stripBrandedMessage(lyrics):
     else:    
         CHARS_IN_BRANDED_MESSAGE = 53
     return lyrics[:-CHARS_IN_BRANDED_MESSAGE]
-"""
+
 # Test
 try:
     pprint(getLyrics(sys.argv[1], sys.argv[2]))
 except SearchParamError as e:
     logging.error(e)
 except CopyrightError as e:
-    logging.error(e)"""
+    logging.error(e)
