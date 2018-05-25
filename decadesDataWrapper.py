@@ -1,8 +1,10 @@
 import pandas as pd
-from musixmatchWrapper import getLyrics, SearchParamError, CopyrightError
+from musixmatchWrapper import getLyrics, SearchParamError, CopyrightError, APILimitError
 from textblob import TextBlob
-import json
+from utils import avg_of, get_exception_string
+import sys
 
+# Get data about the top 100 songs in the past 6 decades from this csv
 decades_of_music_df = pd.read_csv('top100ByDecade.csv', encoding='latin-1')
 
 # Store only the artist name and title of the top 100 songs from 1950-2010
@@ -15,6 +17,7 @@ decades_of_music = {
     '2000s': decades_of_music_df[0:100][['artist_name', 'title']]
 }
 
+# Create a placeholder object to store all of the lyrics for top 100 songs in each decade
 lyrics_by_decade = {
     '1950s': [],
     '1960s': [],
@@ -24,32 +27,52 @@ lyrics_by_decade = {
     '2000s': []
 }
 
-numSongs = 1
+number_of_songs = 1
 
+# For each decade, iterate over all of the songs and search for lyrics
 for decade, df in decades_of_music.items():
     for index, row in df.iterrows():
-        print(numSongs, ': ', end='')
+        print(number_of_songs, ': ', end='')
         try:
-            [lyrics_by_decade[decade].append(lyric) for lyric in getLyrics(row['title'], row['artist_name'])]
-            #print(row['title'], 'by', row['artist_name'])
-        except CopyrightError as e:
-            #print(e)
-            pass
-        except SearchParamError as e:
-            print(e)
-            numSongs += 1
-            continue
-        except json.decoder.JSONDecodeError as e:
-            print(e)
-            print('Song: {} by {} had a JSON decoding error'.format(row['title'], row['artist_name']))
-        print('')
-        numSongs += 1
+            # Append each information about a given song to the given decade's lyrics array
+            lyrics = getLyrics(row['title'], row['artist_name'])
 
-lyricBlobs = {}
-"""
-for decade, lyrics in lyrics_by_decade.items():
-    lyricBlobs[decade] = TextBlob(' '.join(lyrics))
-    for sentence in lyricBlobs[decade].sentences:
-        print('Sentence: {}\n\tPolarity: {}\n\n'.format(sentence, 
-            sentence.sentiment.polarity))
-"""
+            lyrics_by_decade[decade].append({
+                'artist_name': row['artist_name'],
+                'song_title': row['title'],
+                'lyrics': lyrics,
+                'lyrics_polarity': TextBlob(' '.join(lyrics))
+            })
+            print('\'{}\' by \'{}\''.format(row['title'], row['artist_name']))
+        except CopyrightError as e:
+            print(get_exception_string(e))
+        except SearchParamError as e:
+            print(get_exception_string(e))
+        except APILimitError as e:
+            print(get_exception_string(e))
+            exit()
+        except Exception as e:
+            print('\'{}\' by \'{}\' received the following error:\n{}'.format(row['title'], 
+                row['artist_name'], get_exception_string(e)))
+        number_of_songs += 1
+
+song_sentiments = {
+    '1950s': {},
+    '1960s': {},
+    '1970s': {},
+    '1980s': {},
+    '1990s': {},
+    '2000s': {}
+}
+
+for dictionary in song_sentiments:
+    for key in ['positive_count', 'negative_count', 'neutral_count']:
+        dictionary[key] = 0
+
+for decade, song_list in lyrics_by_decade.items():
+    for song_info in song_list:
+        if song_info['lyrics_polarity'] > 0:
+            song_sentiments[decade]['positive_count'] += 1
+
+for decade, polarities in song_sentiments.items():
+    print('{}: {}'.format(decade, avg_of(polarities)))

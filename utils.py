@@ -10,3 +10,13 @@ def time(fn):
         return fn_result
         
     return timedFunction
+
+def avg_of(array):
+    total = 0
+    for val in array:
+        total += val
+    return total / len(array)
+
+def get_exception_string(error):
+    template = '{}: {}'
+    return template.format(type(error).__name__, error)
