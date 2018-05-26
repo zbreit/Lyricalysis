@@ -12,9 +12,9 @@ decades_of_music = {
     '1950s': decades_of_music_df[500:600][['artist_name', 'title']],
     '1960s': decades_of_music_df[400:500][['artist_name', 'title']],
     '1970s': decades_of_music_df[300:400][['artist_name', 'title']],
-    '1980s': decades_of_music_df[200:300][['artist_name', 'title']],
-    '1990s': decades_of_music_df[100:200][['artist_name', 'title']],
-    '2000s': decades_of_music_df[0:100][['artist_name', 'title']]
+    # '1980s': decades_of_music_df[200:300][['artist_name', 'title']],
+    # '1990s': decades_of_music_df[100:200][['artist_name', 'title']],
+    # '2000s': decades_of_music_df[0:100][['artist_name', 'title']]
 }
 
 # Create a placeholder object to store all of the lyrics for top 100 songs in each decade
@@ -22,9 +22,9 @@ lyrics_by_decade = {
     '1950s': [],
     '1960s': [],
     '1970s': [],
-    '1980s': [],
-    '1990s': [],
-    '2000s': []
+    # '1980s': [],
+    # '1990s': [],
+    # '2000s': []
 }
 
 number_of_songs = 1
@@ -41,7 +41,7 @@ for decade, df in decades_of_music.items():
                 'artist_name': row['artist_name'],
                 'song_title': row['title'],
                 'lyrics': lyrics,
-                'lyrics_polarity': TextBlob(' '.join(lyrics))
+                'lyrics_polarity': TextBlob(' '.join(lyrics)).sentiment.polarity
             })
             print('\'{}\' by \'{}\''.format(row['title'], row['artist_name']))
         except CopyrightError as e:
@@ -60,12 +60,12 @@ song_sentiments = {
     '1950s': {},
     '1960s': {},
     '1970s': {},
-    '1980s': {},
-    '1990s': {},
-    '2000s': {}
+    # '1980s': {},
+    # '1990s': {},
+    # '2000s': {}
 }
 
-for dictionary in song_sentiments:
+for key, dictionary in song_sentiments.items():
     for key in ['positive_count', 'negative_count', 'neutral_count']:
         dictionary[key] = 0
 
@@ -73,6 +73,12 @@ for decade, song_list in lyrics_by_decade.items():
     for song_info in song_list:
         if song_info['lyrics_polarity'] > 0:
             song_sentiments[decade]['positive_count'] += 1
+        elif song_info['lyrics_polarity'] < 0:
+            song_sentiments[decade]['negative_count'] += 1
+        elif song_info['lyrics_polarity'] == 0:
+            song_sentiments[decade]['neutral_count'] += 1   
 
-for decade, polarities in song_sentiments.items():
-    print('{}: {}'.format(decade, avg_of(polarities)))
+for decade, sentiment_dict in song_sentiments.items():
+    print('{}:\n\tPositive: {}\n\tNegative: {}\n\tNeutral: {}'.format(decade,
+        sentiment_dict['positive_count'], sentiment_dict['negative_count'], 
+        sentiment_dict['neutral_count']))

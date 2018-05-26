@@ -106,3 +106,4 @@ venv.bak/
 # USER-DEFiNED EXCLUDES
 client_secret.json
 config.json
+.vscode
