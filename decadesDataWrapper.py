@@ -9,44 +9,36 @@ decades_of_music_df = pd.read_csv('top100ByDecade.csv', encoding='latin-1')
 
 # Store only the artist name and title of the top 100 songs from 1950-2010
 decades_of_music = {
-    '1950s': {
-        'dataframe': decades_of_music_df[500:600][['artist_name', 'title']],
-        'song_info_list': [],
-        'song_sentiments': {}
-    },
-    '1960s': {
-        'dataframe': decades_of_music_df[400:500][['artist_name', 'title']],
-        'song_info_list': [],
-        'song_sentiments': {}
-    },
-    '1970s': {
-        'dataframe': decades_of_music_df[300:400][['artist_name', 'title']],
-        'song_info_list': [],
-        'song_sentiments': {}
-    },
-    '1980s': {
-        'dataframe': decades_of_music_df[200:300][['artist_name', 'title']],
-        'song_info_list': [],
-        'song_sentiments': {}
-    },
-    '1990s': {
-        'dataframe': decades_of_music_df[100:200][['artist_name', 'title']],
-        'song_info_list': [],
-        'song_sentiments': {}
-    },
-    '2000s': {
-        'dataframe': decades_of_music_df[0:100][['artist_name', 'title']],
-        'song_info_list': [],
-        'song_sentiments': {}
-    }
+    '1950s': {},
+    '1960s': {},
+    '1970s': {},
+    '1980s': {},
+    '1990s': {},
+    '2000s': {}
 }
 
-number_of_songs = 1
+# Keeps track of which decade of songs is being selected from the data frame
+slice_index = 500
+
+# Populate each decade's dictionary with the appropriate fields
+for decade, decade_info in decades_of_music.items():
+    decade_info['dataframe'] = decades_of_music_df[slice_index:(slice_index + 100)][['artist_name',
+        'title']]
+    decade_info['song_info_list'] = []
+    decade_info['song_sentiments'] = {
+        'positive_count': 0,
+        'negative_count': 0,
+        'neutral_count': 0,
+    }
+    slice_index -= 100
+
+current_song_number = 1
 
 # For each decade, iterate over all of the songs and search for lyrics
 for decade, decade_info in decades_of_music.items():
     for index, row in decade_info['dataframe'].iterrows():
-        print(number_of_songs, ': ', end='')
+        print(current_song_number, ': ', end='')
+        current_song_number += 1
         try:
             # Append each information about a given song to the given decade's lyrics array
             lyrics = getLyrics(row['title'], row['artist_name'])
@@ -60,20 +52,19 @@ for decade, decade_info in decades_of_music.items():
             print('\'{}\' by \'{}\''.format(row['title'], row['artist_name']))
         except CopyrightError as e:
             print(get_exception_string(e))
+            continue
         except SearchParamError as e:
             print(get_exception_string(e))
+            continue
         except APILimitError as e:
             print(get_exception_string(e))
             exit()
         except Exception as e:
             print('\'{}\' by \'{}\' received the following error:\n{}'.format(row['title'], 
                 row['artist_name'], get_exception_string(e)))
-        number_of_songs += 1
+            continue
 
-for decade, decade_info in decades_of_music.items():
-    for key in ['positive_count', 'negative_count', 'neutral_count']:
-        decade_info['song_sentiments'][key] = 0
-
+# After grabbing the lyrics, total the number of songs with positive, negative, or neutral polarities
 for decade, decade_info in decades_of_music.items():
     for song_info in decade_info['song_info_list']:
         if song_info['lyrics_polarity'] > 0:
@@ -85,6 +76,7 @@ for decade, decade_info in decades_of_music.items():
         elif song_info['lyrics_polarity'] == 0:
             decade_info['song_sentiments']['neutral_count'] += 1   
 
+# Print out chi-square counts for later analysis
 for decade, decade_info in decades_of_music.items():
     print('{}:\n\tPositive: {}\n\tNegative: {}\n\tNeutral: {}'.format(decade,
         decade_info['song_sentiments']['positive_count'], 
