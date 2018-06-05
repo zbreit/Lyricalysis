@@ -1,5 +1,5 @@
 import pandas as pd
-from musixmatchWrapper import getLyrics, SearchParamError, CopyrightError, APILimitError
+from musixmatchWrapper import get_lyrics_by_search, SearchParamError, CopyrightError, APILimitError
 from textblob import TextBlob
 from utils import avg_of, get_exception_string
 import sys
@@ -41,7 +41,7 @@ for decade, decade_info in decades_of_music.items():
         current_song_number += 1
         try:
             # Append each information about a given song to the given decade's lyrics array
-            lyrics = getLyrics(row['title'], row['artist_name'])
+            lyrics = get_lyrics_by_search(row['title'], row['artist_name'])
 
             decades_of_music[decade]['song_info_list'].append({
                 'artist_name': row['artist_name'],
