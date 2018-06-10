@@ -52,14 +52,19 @@ def get_lyrics_from_response(song_response):
     return lyrics
 
 def get_album_lyrics(album_name, artist_name):
+    """ Returns the song lyrics for all songs on an album given the album name and artist name """
     track_ids = get_track_ids(album_name, artist_name)
 
     album_lyrics = []
+    
     for current_id in track_ids:
         try:
             album_lyrics.append(get_lyrics_by_id(current_id))
         except CopyrightError as e:
             print(get_exception_string(e))
+
+    if len(album_lyrics) == 0:
+        raise CopyrightError("The entire album is restricted")
 
     return album_lyrics
 
@@ -78,52 +83,109 @@ def get_track_ids(album_name, artist_name):
 
 def get_artist_id(artist_name):
     """ Returns the musixmatch id of an artist """
-    """
-        Search for a given artist, returning only one result. This function 
-        (perhaps simplistically) assumes that the first result will be the correct
-        artist.
-    """
-    artist_search_response = musixmatch.artist_search(artist_name, page=0, page_size=2, 
+    artist_search_response = musixmatch.artist_search(artist_name, page=0, page_size=10, 
         f_artist_id='', f_artist_mbid='')
 
     raise_for_status_error(artist_search_response['message']['header']['status_code'])
 
-    return artist_search_response['message']['body']['artist_list'][0]['artist']['artist_id']
+    for artist_dict in artist_search_response['message']['body']['artist_list']:
+        artist = artist_dict['artist']
+
+        if(is_exact_match(artist_name, artist['artist_name'])):
+            return artist['artist_id']
+
+        elif(is_fuzzy_match(artist_name, artist['artist_name'])):
+            return artist['artist_id']
+
+    # If no match can be found, raise an error
+    raise SearchParamError("Artist not found.")
+
+def is_exact_match(album1_title, album2_title):
+    """ Returns true if the lowercase version of the provided album titles are equal """
+    if get_cleansed_string(album1_title) == get_cleansed_string(album2_title):
+        return True
+    elif is_remaster(album1_title, album2_title) or is_edition(album1_title, album2_title):
+        return True
+    else:
+        return False
+
+def is_fuzzy_match(album1_title, album2_title):
+    """ Returns true if there is a partial match between two album titles and the user agrees """
+    # If album2_title is just album1_title plus a space, a character that isn't a letter or 
+    # '&' or '/' or '-', and any number of other characters, prompt the user for a match
+    if re.match(album1_title + ' [^\w&/-].+', album2_title) is not None:
+        if prompt_user_match(album1_title, album2_title):
+            return True
+    return False
+
+def is_remaster(album1_title, album2_title):
+    """ Returns true album2 is just a remaster of album1 """
+    return re.match(album1_title + ' (\[|\()(R|r)emaster(ed)?(\)|\])', album2_title) is not None
+
+def is_edition(album1_title, album2_title):
+    """ Returns true album2 is just another edition of album1 """
+    return re.match(album1_title + ' (\[|\().+(E|e)dition(\)|\])', album2_title) is not None
+ 
+def get_cleansed_string(str1):
+    """ Return a string without special characters """
+    EXCLUDE_LIST = ['"', '\'', '’', ',']
+
+    # Remove all special characters from a given string
+    for char in EXCLUDE_LIST:
+        str1 = str1.replace(char, '')
+
+    return str1.lower()
 
 def get_album_id(album_name, artist_name):
     """ Returns the album id given its name and the name of the artist """
     artist_id = get_artist_id(artist_name)
     album_list = get_all_albums(artist_id)
-    
+
+    # Look through the albums for an exact match. 
+    # If there's a partial match, prompt the user to confirm
     for album_dict in album_list:
         album = album_dict['album']
-        if(album['album_release_type'] != 'Album'):
+
+        # Remove any non-albums from the list
+        if album['album_release_type'] != 'Album':
             continue
             
-        if(album_name.lower() == album['album_name'].lower()):
+        if is_exact_match(album_name, album['album_name']):
             return album['album_id']
 
-        # If the first word in the album titles match, prompt the user 
-        # to see if it is a real match
-        elif(album_name.split(' ')[0].lower() == album['album_name'].split(' ')[0].lower()):
-            user_response = input('Is \'{}\' the same as \'{}\' (y/n)?'
-                .format(album_name, album['album_name']))
-            user_response = user_response.lower()
-            if(user_response == 'y' or user_response == 'yes'):
-                return album['album_id']
-            else:
-                continue
+        elif is_fuzzy_match(album_name, album['album_name']):
+            return album['album_id']
     
-    raise SearchParamError('Could not locate the album \'{}\' by \'{}\''
-            .format(album_name, artist_name))
+    # If no matching album can be found, raise an error
+    raise SearchParamError('Could not locate the album.')
+
+def prompt_user_match(val1, val2):
+    """ Returns true if the user thinks that two provided values are equivalent """
+    user_response = input('\tIs \'{}\' the same as \'{}\' (y/n)? '.format(val1, val2))
+    user_response = user_response.lower()
+
+    return user_response == 'y' or user_response == 'yes'
 
 def get_all_albums(artist_id):
     """ Returns a list containing all albums produced by an artist """
-    album_response = musixmatch.artist_albums_get(artist_id, g_album_name=1, 
-        page=0, page_size=100, s_release_date='dsc')
+    page_num = 0
+    retreived_all_albums = False
+    album_list = []
 
-    raise_for_status_error(album_response['message']['header']['status_code'])
-    return album_response['message']['body']['album_list']
+    while not retreived_all_albums:
+        album_response = musixmatch.artist_albums_get(artist_id, g_album_name=1, 
+            page=page_num, page_size=100, s_release_date='dsc')
+
+        raise_for_status_error(album_response['message']['header']['status_code'])
+
+        album_list += album_response['message']['body']['album_list']
+
+        page_num += 1
+
+        if album_response['message']['header']['available'] < len(album_list):
+            retreived_all_albums = True
+
+    return album_list
 
 def strip_branded_message(lyrics):
     """ Removes the branded messaging (and any trailing numbers at the end) from the lyrics """
@@ -140,8 +202,7 @@ def raise_for_status_error(status_code):
         If there was a connection error, it throws a requests.exceptions.ConnectionError
     """
     if status_code == 404:
-        raise SearchParamError('Could not locate the song \'{}\' by \'{}\''
-            .format(song_title, artist))
+        raise SearchParamError('Could not locate the given song')
     
     elif status_code == 401:
         raise APILimitError('Exceeded the max number of daily API calls')
@@ -149,13 +210,14 @@ def raise_for_status_error(status_code):
     elif status_code != 200:
         raise requests.exceptions.HTTPError('Received a status code of ' +  str(status_code))
 
-
+"""
 # Test
 try:
-    pprint(get_album_lyrics('Homework', 'Daft Punk'))
+    pprint(get_album_lyrics('Shawn Mendes', 'Shawn Mendes'))
 except SearchParamError as e:
     logging.error(get_exception_string(e))
 except CopyrightError as e:
     logging.error(get_exception_string(e))
 except Exception as e:
     print(get_exception_string(e))
+"""

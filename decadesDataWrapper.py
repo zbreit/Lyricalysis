@@ -30,6 +30,7 @@ for decade, decade_info in decades_of_music.items():
         'negative_count': 0,
         'neutral_count': 0,
     }
+    decade_info['avg_polarity'] = 0
     slice_index -= 100
 
 current_song_number = 1
@@ -37,36 +38,33 @@ current_song_number = 1
 # For each decade, iterate over all of the songs and search for lyrics
 for decade, decade_info in decades_of_music.items():
     for index, row in decade_info['dataframe'].iterrows():
-        print(current_song_number, ': ', end='')
+        print('{}: \'{}\' by \'{}\' '.format(current_song_number, 
+            row['title'], row['artist_name']))
         current_song_number += 1
         try:
             # Append each information about a given song to the given decade's lyrics array
             lyrics = get_lyrics_by_search(row['title'], row['artist_name'])
 
-            decades_of_music[decade]['song_info_list'].append({
+            decade_info['song_info_list'].append({
                 'artist_name': row['artist_name'],
                 'song_title': row['title'],
                 'lyrics': lyrics,
                 'lyrics_polarity': TextBlob(' '.join(lyrics)).sentiment.polarity
             })
-            print('\'{}\' by \'{}\''.format(row['title'], row['artist_name']))
         except CopyrightError as e:
             print(get_exception_string(e))
-            continue
         except SearchParamError as e:
             print(get_exception_string(e))
-            continue
         except APILimitError as e:
             print(get_exception_string(e))
             exit()
         except Exception as e:
-            print('\'{}\' by \'{}\' received the following error:\n{}'.format(row['title'], 
-                row['artist_name'], get_exception_string(e)))
-            continue
+            print(get_exception_string(e))
 
 # After grabbing the lyrics, total the number of songs with positive, negative, or neutral polarities
 for decade, decade_info in decades_of_music.items():
     for song_info in decade_info['song_info_list']:
+        decade_info['avg_polarity'] += song_info['lyrics_polarity']
         if song_info['lyrics_polarity'] > 0:
             decade_info['song_sentiments']['positive_count'] += 1
 
@@ -75,6 +73,8 @@ for decade, decade_info in decades_of_music.items():
 
         elif song_info['lyrics_polarity'] == 0:
             decade_info['song_sentiments']['neutral_count'] += 1   
+    decade_info['avg_polarity'] /= len(decade_info['song_info_list'])
+    print('\'{}\': \'{}\''.format(decade, decade_info['avg_polarity']))
 
 # Print out chi-square counts for later analysis
 for decade, decade_info in decades_of_music.items():

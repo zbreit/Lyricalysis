@@ -18,5 +18,5 @@ def avg_of(array):
     return total / len(array)
 
 def get_exception_string(error):
-    template = '{}: {}'
+    template = '\t{}: {}'
     return template.format(type(error).__name__, error)
