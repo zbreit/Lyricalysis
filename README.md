@@ -1,5 +1,5 @@
 # Lyricalysis
-Code base for my AP statistics final project involving sentiment analysis of music across various genres, time periods, and albums
+An experiment in sentiment analysis of music across various genres, time periods, and albums
 
 ## Citations
 The `top100ByDecade.csv` file was sourced from the following research project:
